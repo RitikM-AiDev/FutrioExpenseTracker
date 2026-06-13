@@ -2,3 +2,8 @@ fastapi
 motor
 python-dotenv
 uvicorn
+python-multipart
+langchain-openai
+langchain
+langgraph
+paddleocr

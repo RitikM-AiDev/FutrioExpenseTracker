@@ -1,5 +1,6 @@
 
 import { useEffect, useState } from "react";
+
 import {
   FaHome,
   FaExchangeAlt,
@@ -10,7 +11,6 @@ import {
   FaCog,
   FaMoon,
   FaBars,
-  FaArrowLeft,
   FaChevronDown,
 } from "react-icons/fa";
 import { useNavigate} from "react-router-dom";
@@ -29,6 +29,7 @@ const CATEGORIES = [
   { label: "Entertainment", icon: "🎬" },
   { label: "Health", icon: "💊" },
   { label: "Utilities", icon: "💡" },
+  {label: "Credit", icon: "🚗"}
 ];
 const TYPE = [
   { label: "credit" as const },
@@ -43,6 +44,7 @@ export default function App() {
   const [isPending, setIsPending] = useState(false);
   const [category, setCategory] = useState("Food & Dining");
   const [catOpen, setCatOpen] = useState(false);
+  const [Image,setImage] = useState<File | null>(null);
   const [typeOpen, setTypeOpen] = useState(false);
   const [amount, setAmount] = useState("");
   const [title, setTitle] = useState("");
@@ -91,8 +93,26 @@ export default function App() {
           setIsPending(false);
         }
   }
-  const closeSidebar = () => setSidebarOpen(false);
+  const closeSidebar =  () => setSidebarOpen(false);
+  const handle_image = async(e : React.ChangeEvent<HTMLInputElement>) =>{
+        const file = e.target.files?.[0]
+        if (!file) return;
 
+        if (file){setImage(file)}
+        console.log("handle image called")
+        console.log(file)
+        const formdata = new FormData();
+        formdata.append("image",file)
+        const response = await fetch(
+          "http://127.0.0.1:8000/upload/image",
+          {
+            method : "POST",
+            body : formdata
+          }
+        )
+        const data = await response.json();
+        console.log(data)
+  }
   return (
     <div className={dark ? "dark" : ""}>
       <div className="app-shell">
@@ -162,10 +182,7 @@ export default function App() {
           <div className="form-card">
 
             <div className="form-header">
-              <button className="back-btn">
-                <FaArrowLeft />
-              </button>
-
+            
               <div>
                 <h1 className="form-title">Add New Expense</h1>
                 <p className="form-subtitle">
@@ -173,7 +190,9 @@ export default function App() {
                 </p>
               </div>
             </div>
-
+            <h1 className="image-h1">Upload Your Bill or Fill The Form Below</h1>
+            <input type="file" accept="image/*" className="file-input" onChange={handle_image}></input>
+            <h1 className="image-h1">OR</h1>
             {/* Title Item input */}
             <div className="field-group">
               <label className="field-label">Title / Item name</label>

@@ -24,15 +24,6 @@ const NAV_ITEMS = [
   { label: "Settings", icon: FaCog, route: "/settings" },
 ];
  
-const CATEGORIES = [
-  { label: "Food & Dining", icon: "🍽", amount: "$717.50", max: "$800", percent: "90%", color: "#10b981" },
-  { label: "Transport", icon: "🚗", amount: "$430.50", max: "$600", percent: "72%", color: "#f59e0b" },
-  { label: "Shopping", icon: "🛍", amount: "$1,004.50", max: "$1,500", percent: "67%", color: "#6366f1" },
-  { label: "Entertainment", icon: "🎬", amount: "$287.00", max: "$400", percent: "72%", color: "#a855f7" },
-  { label: "Health", icon: "💊", amount: "$0.00", max: "$200", percent: "0%", color: "#ef4444" },
-  { label: "Utilities", icon: "💡", amount: "$250.00", max: "$300", percent: "83%", color: "#3b82f6" },
-];
-
 
 type Transaction = {
    title: string;
@@ -93,19 +84,38 @@ const [health, setHealth] = useState(0);
               // localStorage.setItem("Debited",String(total_expense))
               setbalance(result["Balance"]);
               // localStorage.setItem("Balance",String(balance_savings))
-              setTotalcategory(food + transport_ + utilities_ + shopping_ + entertainment_ + health_)
+            const total_category_ =
+              food + transport_ + utilities_ + shopping_ + entertainment_ + health_;              
               console.log(total_category)
-              
+            setTotalcategory(total_category_)
+                
                   }   
+
     useEffect(()=>{
       get_history_transactions();
     },[])
-    const shoppingPct = total_category ? (shopping / total_category) * 100 : 0;
-    const foodPct = total_category ? (foodDining / total_category) * 100 : 0;
-    const transportPct = total_category ? (transport / total_category) * 100 : 0;
-    const entertainmentPct = total_category ? (entertainment / total_category) * 100 : 0;
-    const utilitiesPct = total_category ? (utilities / total_category) * 100 : 0;
-    const healthPct = total_category ? (health / total_category) * 100 : 0;
+    
+  const shoppingPct = total_category ? `${((shopping / total_category) * 100).toFixed(3)}%` : "0%";
+const foodPct = total_category ? `${((foodDining / total_category) * 100).toFixed(3)}%` : "0%";
+const transportPct = total_category ? `${((transport / total_category) * 100).toFixed(3)}%` : "0%";
+const entertainmentPct = total_category ? `${((entertainment / total_category) * 100).toFixed(3)}%` : "0%";
+const utilitiesPct = total_category ? `${((utilities / total_category) * 100).toFixed(3)}%` : "0%";
+const healthPct = total_category ? `${((health / total_category) * 100).toFixed(3)}%` : "0%";
+const shoppingP = total_category ? (shopping / total_category) * 100 : 0;
+const foodP = total_category ? (foodDining / total_category) * 100 : 0;
+const transportP = total_category ? (transport / total_category) * 100 : 0;
+const entertainmentP = total_category ? (entertainment / total_category) * 100 : 0;
+const utilitiesP = total_category ? (utilities / total_category) * 100 : 0;
+const healthP = total_category ? (health / total_category) * 100 : 0;
+console.log(foodPct,transportPct,entertainmentPct,shoppingPct)
+     const CATEGORIES = [
+  { label: "Food & Dining", icon: "🍽", amount: `Rs.${foodDining}`, max: `Rs.${total_category}`, percent: foodPct, color: "#10b981" },
+  { label: "Transport", icon: "🚗", amount: `Rs.${transport}`, max: `Rs.${total_category}`, percent: transportPct,color: "#f59e0b" },
+  { label: "Shopping", icon: "🛍",amount: `Rs.${shopping}`, max: `Rs.${total_category}`, percent: shoppingPct,color: "#6366f1" },
+  { label: "Entertainment", icon: "🎬",amount: `Rs.${entertainment}`, max: `Rs.${total_category}`,percent: entertainmentPct, color: "#a855f7" },
+  { label: "Health", icon: "💊",amount: `Rs.${health}`, max: `Rs.${total_category}`, percent: healthPct,color: "#ef4444" },
+  { label: "Utilities", icon: "💡",amount: `Rs.${utilities}`, max: `Rs.${total_category}`,percent: utilities, color: "#3b82f6" },
+];
   return (
     <div className={dark ? "dark" : ""}>
       <div className="app-shell">
@@ -224,28 +234,8 @@ const [health, setHealth] = useState(0);
                   </div>
                 </div>
 
-                <div className="legend-indicators">
-                  <span className="legend-item"><span className="dot primary-dot"></span> Expenses</span>
-                  <span className="legend-item"><span className="dot secondary-dot"></span> Income</span>
-                </div>
-
-                {/* Simulated Wave-Line Chart using stylized standard HTML/CSS scaling paths */}
-                <div className="chart-drawing-area">
-                  <div className="y-axis-labels">
-                    <span>$2.5k</span><span>$2k</span><span>$1.5k</span><span>$1k</span><span>$500</span><span>$0</span>
-                  </div>
-                  <div className="chart-grid-canvas">
-                    {/* Simulated SVG Path vectors mapping out curves matching dashboard ui photo.png */}
-                    <svg className="chart-svg" viewBox="0 0 500 150">
-                      <path d="M10,90 Q50,70 90,50 T170,60 T250,40 T330,30 T410,70 T490,45" fill="none" stroke="#6366f1" strokeWidth="3" />
-                      <path d="M10,120 Q50,115 90,130 T170,110 T250,120 T330,105 T410,125 T490,100" fill="none" stroke="#10b981" strokeWidth="3" />
-                    </svg>
-                    <div className="x-axis-labels">
-                      <span>May 1</span><span>May 8</span><span>May 15</span><span>May 22</span><span>May 31</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              
+                             </div>
 
               {/* Right Side: Circular Category Pie Proportions */}
               <div className="pie-card-wrapper">
@@ -257,15 +247,15 @@ const [health, setHealth] = useState(0);
                  <div
                   className="donut-chart-container"
                   style={{
-                    background: `conic-gradient(
-                      #6366f1 0% ${shoppingPct}%,
-                      #10b981 ${shoppingPct}% ${shoppingPct + foodPct}%,
-                      #f59e0b ${shoppingPct + foodPct}% ${shoppingPct + foodPct + transportPct}%,
-                      #a855f7 ${shoppingPct + foodPct + transportPct}% ${shoppingPct + foodPct + transportPct + entertainmentPct}%,
-                      #94a3b8 ${shoppingPct + foodPct + transportPct + entertainmentPct}% ${shoppingPct + foodPct + transportPct + entertainmentPct + utilitiesPct}%,
-                      #ef4444 ${shoppingPct + foodPct + transportPct + entertainmentPct + utilitiesPct}% 100%
-                    )`
-                  }}
+  background: `conic-gradient(
+    #6366f1 0% ${shoppingP}%,
+    #10b981 ${shoppingP}% ${shoppingP + foodP}%,
+    #f59e0b ${shoppingP + foodP}% ${shoppingP + foodP + transportP}%,
+    #a855f7 ${shoppingP + foodP + transportP}% ${shoppingP + foodP + transportP + entertainmentP}%,
+    #94a3b8 ${shoppingP + foodP + transportP + entertainmentP}% ${shoppingP + foodP + transportP + entertainmentP + utilitiesP}%,
+    #ef4444 ${shoppingP + foodP + transportP + entertainmentP + utilitiesP}% 100%
+  )`
+}}
                 >
                   <div className="donut-center">
                     <span className="donut-number">₹{total_expense}</span>
@@ -348,7 +338,7 @@ const [health, setHealth] = useState(0);
                 </div>
 
                 <div className="budget-list-stack">
-                  {CATEGORIES.slice(0, 5).map((cat) => (
+                  {CATEGORIES.slice(0, 6).map((cat) => (
                     <div key={cat.label} className="budget-list-item">
                       <div className="budget-item-labels">
                         <span className="b-title">{cat.label}</span>

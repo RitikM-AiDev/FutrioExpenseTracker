@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI,UploadFile,File
 from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
 import os
@@ -6,9 +6,15 @@ from datetime import datetime,timedelta
 from fastapi.exceptions import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from validation import add_Expense_data
+from paddleocr import PaddleOCR
+
 
 load_dotenv()
 app = FastAPI()
+
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR,exist_ok=True)
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -303,4 +309,36 @@ async def get_transactions_history(email : str):
               status_code=500,
               detail="Error Occured"
          )
-    
+import shutil
+from paddle_ import analysis_image
+from result_agent import generate_final_json
+from datetime import timezone
+@app.post("/upload/image")
+async def upload_image(image : UploadFile = File(...)):
+        file_path = os.path.join(UPLOAD_DIR,image.filename)
+        with open(file_path,"wb") as buffer:
+             shutil.copyfileobj(image.file, buffer)
+        text = analysis_image(file_path)
+        final_result = generate_final_json(text, "hello@gmail.com")
+        for i in final_result:
+              await transaction_collection.update_one(
+            {"email": i["email"]},  
+            {
+                "$push": {
+                    "transactions": {
+                        "title": i["title"],
+                        "amount": i["amount"],
+                        "date": datetime.now(timezone.utc),
+                        "category": i["category"],
+                        "type": "debit"
+                    }
+                }
+            },
+            upsert=True
+        )
+        print(final_result)
+        # os.remove(file_path)
+        return {
+             "message": "Image saved successfully",
+            "filename": image.filename
+        }
