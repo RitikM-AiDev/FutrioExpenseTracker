@@ -7,3 +7,4 @@ langchain-openai
 langchain
 langgraph
 paddleocr
+passlib[bcrypt]

@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { FaSun, FaMoon } from 'react-icons/fa';
 
 interface Star {
   x: number;
@@ -19,37 +21,66 @@ interface InteractiveParticle {
 }
 
 export const Register: React.FC = () => {
+  const nav = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-
+  const [dark, setDark] = useState(localStorage.getItem("darktheme") !== "false");
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const mouseRef = useRef({ x: 0, y: 0, targetX: 0, targetY: 0, isMoving: false });
   const mouseTimeoutRef = useRef<number | null>(null);
+  const isDarkRef = useRef(dark);
 
+  useEffect(() => {
+    isDarkRef.current = dark;
+  }, [dark]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const toggleDark = () => {
+    const next = !dark;
+    setDark(next);
+    localStorage.setItem("darktheme", String(next));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
     setSuccessMessage('');
-
+    
     if (!email || !password) {
       setErrorMessage('Please fill in all fields.');
       return;
     }
-
+    
     setIsLoading(true);
+    const response = await fetch(
+      "http://127.0.0.1:8000/futrio/register",
+      {
+        method : "POST",
+        headers : {"Content-Type" : "application/json"},
+        body : JSON.stringify({
+          "email" : email,
+          "password" : password
+        })
+      }
+    );
 
-    // Simulate login API call
-    setTimeout(() => {
+    if (response.ok) {
+      setSuccessMessage("Account created successfully! Redirecting...");
+      setErrorMessage("");
+
+      setTimeout(() => {
+        setIsLoading(false);
+        nav("/", { replace: true });
+      }, 1500);
+    } else {
       setIsLoading(false);
-      setSuccessMessage('Welcome back! Launching workspace...');
-    }, 1500);
+      setErrorMessage("User already exists or registration failed!");
+      setSuccessMessage("");
+    }
   };
 
   // Starfield and Mouse Interactive Effect
@@ -74,12 +105,10 @@ export const Register: React.FC = () => {
 
     // Track Mouse
     const handleMouseMove = (e: MouseEvent) => {
-      // Normalize mouse coordinates from -1 to 1 (centered)
       mouseRef.current.targetX = (e.clientX - width / 2) / (width / 2);
       mouseRef.current.targetY = (e.clientY - height / 2) / (height / 2);
       mouseRef.current.isMoving = true;
 
-      // Reset isMoving state after mouse stops moving
       if (mouseTimeoutRef.current) {
         window.clearTimeout(mouseTimeoutRef.current);
       }
@@ -87,7 +116,6 @@ export const Register: React.FC = () => {
         mouseRef.current.isMoving = false;
       }, 100);
 
-      // Add a couple of active glowing dust particles at mouse position
       if (Math.random() < 0.6) {
         createMouseParticle(e.clientX, e.clientY);
       }
@@ -111,7 +139,7 @@ export const Register: React.FC = () => {
     // Interactive Mouse Particles
     const mouseParticles: InteractiveParticle[] = [];
     const createMouseParticle = (x: number, y: number) => {
-      const pColors = ['#ffffff'];
+      const pColors = isDarkRef.current ? ['#ffffff', '#818cf8'] : ['#6366f1', '#4f46e5'];
       mouseParticles.push({
         x,
         y,
@@ -125,46 +153,34 @@ export const Register: React.FC = () => {
 
     // Animation Loop
     const animate = () => {
-      // Clear canvas with a very soft alpha trails to create space depth
-      ctx.fillStyle = 'rgba(3, 3, 3, 0.2)';
+      const isDark = isDarkRef.current;
+      ctx.fillStyle = isDark ? 'rgba(3, 3, 3, 0.2)' : 'rgba(241, 245, 249, 0.25)';
       ctx.fillRect(0, 0, width, height);
 
-      // Smoothly interpolate mouse positions for dampening effect
       mouseRef.current.x += (mouseRef.current.targetX - mouseRef.current.x) * 0.05;
       mouseRef.current.y += (mouseRef.current.targetY - mouseRef.current.y) * 0.05;
 
       const steerX = mouseRef.current.x;
       const steerY = mouseRef.current.y;
 
-      // Draw and Update Stars
       for (let i = 0; i < numStars; i++) {
         const star = stars[i];
-
-        // Move stars closer (decrease z)
-        // Adjust speed dynamically based on mouse velocity/steering offset
         const speed = 2.5 + Math.sqrt(steerX * steerX + steerY * steerY) * 2;
         star.z -= speed;
-
-        // Apply mouse steering displacement (parallax drift)
-        // Move stars opposite to the mouse steering direction
         star.x -= steerX * speed * 0.4;
         star.y -= steerY * speed * 0.4;
 
-        // If star passes the screen, reset to far background
         if (star.z <= 0) {
           star.z = width;
           star.x = (Math.random() - 0.5) * width * 2;
           star.y = (Math.random() - 0.5) * height * 2;
         }
 
-        // Project 3D coordinate to 2D Screen Space
         const k = 128.0 / star.z;
         const px = star.x * k + width / 2;
         const py = star.y * k + height / 2;
 
-        // Render star only if it is visible on canvas
         if (px >= 0 && px <= width && py >= 0 && py <= height) {
-          // Stars closer look brighter and larger
           const sizeFactor = (1 - star.z / width);
           const size = star.size * sizeFactor * 2;
           const alpha = sizeFactor;
@@ -172,21 +188,20 @@ export const Register: React.FC = () => {
           ctx.beginPath();
           ctx.arc(px, py, size, 0, Math.PI * 2);
 
-          // Apply radial glow for colored stars
-          if (star.color !== '#ffffff' && star.color !== '#cbd5e1') {
+          const starColor = isDark ? star.color : '#6366f1';
+          if (starColor !== '#ffffff' && starColor !== '#cbd5e1') {
             ctx.shadowBlur = size * 3;
-            ctx.shadowColor = star.color;
+            ctx.shadowColor = starColor;
           } else {
             ctx.shadowBlur = 0;
           }
 
-          ctx.fillStyle = star.color;
+          ctx.fillStyle = starColor;
           ctx.globalAlpha = alpha;
           ctx.fill();
         }
       }
 
-      // Restore shadows/alphas for other rendering
       ctx.shadowBlur = 0;
       ctx.globalAlpha = 1.0;
 
@@ -195,7 +210,7 @@ export const Register: React.FC = () => {
         const p = mouseParticles[i];
         p.x += p.vx;
         p.y += p.vy;
-        p.alpha -= 0.02; // Fade out slowly
+        p.alpha -= 0.02;
 
         if (p.alpha <= 0) {
           mouseParticles.splice(i, 1);
@@ -212,13 +227,12 @@ export const Register: React.FC = () => {
       }
 
       // Draw constellation links near mouse pointer
-      // If mouse is moving, connect close stars with light lines to create constellation feeling
       const actualMouseX = (mouseRef.current.targetX * (width / 2)) + width / 2;
       const actualMouseY = (mouseRef.current.targetY * (height / 2)) + height / 2;
 
       ctx.shadowBlur = 0;
-      ctx.globalAlpha = 0.15;
-      ctx.strokeStyle = '#06b6d4';
+      ctx.globalAlpha = isDark ? 0.15 : 0.1;
+      ctx.strokeStyle = isDark ? '#06b6d4' : '#4f46e5';
 
       stars.forEach(star => {
         const k = 128.0 / star.z;
@@ -229,7 +243,6 @@ export const Register: React.FC = () => {
         const dy = py - actualMouseY;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
-        // If star is near mouse, draw dynamic neon link
         if (distance < 120) {
           ctx.beginPath();
           ctx.moveTo(actualMouseX, actualMouseY);
@@ -256,88 +269,100 @@ export const Register: React.FC = () => {
   }, []);
 
   return (
-    <div className="app-container">
-      {/* Dynamic Starfield Background Canvas */}
-      <canvas ref={canvasRef} className="starfield-canvas" />
+    <div className={dark ? "theme-dark" : "theme-light"}>
+      <div className="app-container">
+        {/* Theme toggle */}
+        <button className="theme-toggle-float" onClick={toggleDark} aria-label="Toggle theme">
+          {dark ? <FaSun /> : <FaMoon />}
+        </button>
 
-  
+        {/* Dynamic Starfield Background Canvas */}
+        <canvas ref={canvasRef} className="starfield-canvas" />
 
-      {/* Glassmorphic Login Card */}
-      <div className="login-card-wrapper">
-        <div className="login-card">
-          <div className="login-header">
-            
-            <h1 className="login-title">Futrio - AI</h1>
-            <p className="login-subtitle">Your AI Powered Expence Tracker</p>
-          </div>
+        {/* Decorative Nebula Lights behind the register card */}
+        <div className="nebula-overlay-1" />
+        <div className="nebula-overlay-2" />
 
-          <form onSubmit={handleSubmit} className="login-form">
-            {errorMessage && <div className="form-feedback error-msg">{errorMessage}</div>}
-            {successMessage && <div className="form-feedback success-msg">{successMessage}</div>}
-
-            {/* Email Input */}
-            <div className="input-container">
-              <input
-                type="email"
-                id="email"
-                className="input-field"
-                placeholder=" "
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="off"
-                required
-              />
-              <label htmlFor="email" className="input-label">Set a Email Address</label>
+        {/* Glassmorphic Register Card */}
+        <div className="login-card-wrapper anim-fadeInScale">
+          <div className="login-card">
+            <div className="login-header anim-fadeInDown">
+              <div className="login-logo">
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 2C12 2 8 6 8 11.5C8 14.5 9.5 16.5 9.5 16.5H14.5C14.5 16.5 16 14.5 16 11.5C16 6 12 2 12 2Z" />
+                  <path d="M9.5 18C9.5 18 6 19 6 22H18C18 19 14.5 18 14.5 18H9.5Z" opacity="0.8" />
+                  <circle cx="12" cy="10" r="1.5" fill="#030303" />
+                </svg>
+              </div>
+              <h1 className="login-title">Futrio AI</h1>
+              <p className="login-subtitle">Create your secure pilot account</p>
             </div>
 
-            {/* Password Input */}
-            <div className="input-container">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                id="password"
-                className="input-field"
-                placeholder=" "
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-              <label htmlFor="password" className="input-label">Password</label>
-              
+            <form onSubmit={handleSubmit} className="login-form">
+              {errorMessage && <div className="form-feedback error-msg" style={{ animation: 'shake 0.4s ease' }}>{errorMessage}</div>}
+              {successMessage && <div className="form-feedback success-msg">{successMessage}</div>}
+
+              {/* Email Input */}
+              <div className="input-container anim-fadeInUp anim-stagger-1">
+                <input
+                  type="email"
+                  id="email"
+                  className="input-field"
+                  placeholder=" "
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="off"
+                  required
+                />
+                <label htmlFor="email" className="input-label">Email Address</label>
+              </div>
+
+              {/* Password Input */}
+              <div className="input-container anim-fadeInUp anim-stagger-2">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  id="password"
+                  className="input-field"
+                  placeholder=" "
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+                <label htmlFor="password" className="input-label">Create Password</label>
+                
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? (
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                    </svg>
+                  ) : (
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+
+              {/* Submit Button */}
               <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setShowPassword(!showPassword)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                type="submit"
+                className="submit-button btn-shimmer anim-fadeInUp anim-stagger-3"
+                disabled={isLoading}
               >
-                {showPassword ? (
-                  /* Eye Off Icon */
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                  </svg>
-                ) : (
-                  /* Eye Icon */
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                )}
+                {isLoading ? 'Creating Account...' : 'Register Session'}
               </button>
+            </form>
+
+            <div className="signup-redirect anim-fadeInUp anim-stagger-4">
+              Already have an account?
+              <a onClick={() => { nav("/", { replace: true }) }} style={{ cursor: "pointer" }} className="signup-link">Login here</a>
             </div>
-
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              className="submit-button"
-              disabled={isLoading}
-            >
-              {isLoading ? 'Authenticating...' : 'Launch Session'}
-            </button>
-          </form>
-
-          <div className="signup-redirect">
-            Already Registered?
-            <a href="#signup" className="signup-link">Login Futrio-expence tracker</a>
           </div>
         </div>
       </div>

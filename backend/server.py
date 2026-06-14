@@ -7,7 +7,7 @@ from fastapi.exceptions import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from validation import add_Expense_data
 from paddleocr import PaddleOCR
-
+from pydantic import BaseModel
 
 load_dotenv()
 app = FastAPI()
@@ -26,6 +26,7 @@ app.add_middleware(
 
 db_client = AsyncIOMotorClient(os.getenv("MONGO_URL"))
 db = db_client["Futrio-Expense-Tracker"]
+users_collection = db["users"]
 transaction_collection = db["transactions"]
 
 
@@ -309,10 +310,14 @@ async def get_transactions_history(email : str):
               status_code=500,
               detail="Error Occured"
          )
+    
+
 import shutil
 from paddle_ import analysis_image
 from result_agent import generate_final_json
 from datetime import timezone
+
+
 @app.post("/upload/image")
 async def upload_image(image : UploadFile = File(...)):
         file_path = os.path.join(UPLOAD_DIR,image.filename)
@@ -342,3 +347,57 @@ async def upload_image(image : UploadFile = File(...)):
              "message": "Image saved successfully",
             "filename": image.filename
         }
+
+from passlib.context import CryptContext
+hash_func = CryptContext(schemes=["argon2"], deprecated="auto")
+def hash_pass(passowrd):
+     hashed_pass = hash_func.hash(passowrd)
+     return hashed_pass
+
+def verify_hash(user_pass,stored_pass):
+     isverified = hash_func.verify(user_pass ,stored_pass)
+     return isverified
+
+from validation import Register_,Login_
+@app.post("/futrio/register")
+async def register(data : Register_):
+        print(data.password)
+        user = await users_collection.find_one({"email" : data.email})
+        if not user:
+            password = hash_pass(data.password)
+            await users_collection.insert_one({
+                  "email" : data.email ,
+                 "password" : password
+                 })
+            return {
+                 "message" : "Data Insertion Successful"
+            }
+        else:
+             raise HTTPException(
+                  status_code=409,
+                  detail="User already Exists"
+             )
+
+
+@app.post("/futrio/login")
+async def register(data : Login_):
+        user = await users_collection.find_one({"email" : data.email})
+        if user:
+            stored_pass = user["password"]
+            entered_pass = data.password
+            isverified = verify_hash(entered_pass,stored_pass)
+            if isverified:
+                return {
+                    "message" : "Data Insertion Successful"
+                }
+            else:
+                 raise HTTPException(
+                      status_code=500,
+                      detail="Password Incorrect"
+                 )
+        else:
+             raise HTTPException(
+                  status_code=409,
+                  detail="User Not Found"
+             )
+     

@@ -7,3 +7,10 @@ class add_Expense_data(BaseModel):
         category : str
         date : datetime
         type : str
+class Register_(BaseModel):
+     email : str
+     password : str
+
+class Login_(BaseModel):
+       email : str
+       password : str

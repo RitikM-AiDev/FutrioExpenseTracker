@@ -1,5 +1,4 @@
 from paddleocr import PaddleOCR
-from pprint import pprint
 def analysis_image(path: str):
     ocr = PaddleOCR(lang="en")
     result = ocr.ocr(path)
