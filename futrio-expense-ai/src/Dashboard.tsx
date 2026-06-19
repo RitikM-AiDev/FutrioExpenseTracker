@@ -626,6 +626,7 @@ export default function Dashboard() {
           gap: 6px;
         }
 
+        
         .tx-category {
           padding: 1px 7px;
           border-radius: 20px;
